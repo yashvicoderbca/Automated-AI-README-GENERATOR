@@ -11,7 +11,7 @@ from code_reader import read_project_files
 load_dotenv()
 
 
-# Step 2: Retrieve the OpenAI API key from the environment variables
+# Step 2: Retrieve the GROQ API key from the environment variables
 api_key = os.getenv("GROQ_API_KEY")
 
 
@@ -21,7 +21,7 @@ if not api_key:
     exit()
 
 
-# Step 3: Initialize the OpenAI client using the API key
+# Step 3: Initialize the OpenAI client pointing to groq's servers
 client = OpenAI(base_url="https://api.groq.com/openai/v1",api_key=api_key)
 
 
