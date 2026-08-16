@@ -3,33 +3,6 @@
              PROJECT PART 2 — CODE READER ENGINE
 ============================================================
 
-Purpose:
---------
-Recursively scans the project directory, filters out
-sensitive, unnecessary, and binary files, and consolidates
-the readable source code into a single text representation.
-
-Key Features:
-------------
-• Recursively scans project files and subdirectories
-• Ignores sensitive files such as .env
-• Skips unnecessary directories such as venv, .git,
-  node_modules, and __pycache__
-• Filters out binary/image files
-• Reads text files safely using UTF-8 encoding
-• Combines source code from multiple files into one output
-• Tracks the number of successfully processed files
-
-Project:
---------
-AI-Powered Code Analysis / Repository Understanding System
-
-Part:
------
-Part 2 — Repository Code Reader
-
-============================================================
-"""
 import os
 
 # Directories that should be ignored during scanning
@@ -37,7 +10,6 @@ IGNORE_DIRS = {
     '.git',
     '__pycache__',
     'node_modules',
-    'venv',
     '.env',
     'build',
     'dist',
@@ -54,10 +26,10 @@ IGNORE_FILES = {
 }
 
 
-def read_project_files(root_dir='.'):
+def read_project_files(root_dir='.',max_chars = 100000):
     # Traverses the project directory tree,
     # ignores non-relevant files and folders,
-    # and consolidates all source code into a single string.
+    # and consolidates  source code into a single string and safely truncates if it exceeds max_chars limit.
 
     combined_code = ""
     file_count = 0
@@ -95,6 +67,9 @@ def read_project_files(root_dir='.'):
             except Exception:
                 # Skip files that cannot be decoded as plain text
                 continue
+            # Edge-case safeguard: truncate if character count exceeds limit
+            if len(combined_code)> max_chars:
+                combined_code = combined_code[:max_chars]+ "\n\n....[TRUNCATED: SOURCE CODE EXCEEDS MAX SAFETY THRESHOLD]....."
 
     return combined_code, file_count
 
