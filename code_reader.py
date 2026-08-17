@@ -1,6 +1,8 @@
 """
 ============================================================
-             PROJECT PART 2 — CODE READER ENGINE
+             PROJECT: AUTOMATED AI README GENERATOR ENGINE
+             MODULE:  code_reader.py
+             DESCRIPTION: TRAVERSES DIRECTORY TREE, IGNORES BINARY/ SENSITIVE FILES, AND READS CODE SAFELY
 ============================================================
 
 import os
@@ -13,7 +15,8 @@ IGNORE_DIRS = {
     '.env',
     'build',
     'dist',
-    '.vscode'
+    '.vscode',
+    '.pytest_cache'
 }
 
 # Specific files that should be ignored
@@ -29,7 +32,7 @@ IGNORE_FILES = {
 def read_project_files(root_dir='.',max_chars = 100000):
     # Traverses the project directory tree,
     # ignores non-relevant files and folders,
-    # and consolidates  source code into a single string and safely truncates if it exceeds max_chars limit.
+    # and returned combined code with safety truncation.
 
     combined_code = ""
     file_count = 0
@@ -54,6 +57,12 @@ def read_project_files(root_dir='.',max_chars = 100000):
                 # Read file contents with UTF-8 encoding
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
+                    # strict character limit safely check 
+                    if len(combined_code) + len(content) > max_chars:
+                        combined_code += f"\n\n=== FILE: {file_path}(PARTICAL/TRUNCATED)===\n\n"
+                        remaining_space = max_chars - len(combined_code)
+                        combined_code += "\n\n.....[TRUNCATED : SOURCE CODE EXCEEDED MAX SAFETY THRESHOLD]........"
+                        return combined_code, file_count
 
                 combined_code += (
                     f"\n\n======================================"
@@ -64,12 +73,10 @@ def read_project_files(root_dir='.',max_chars = 100000):
                 combined_code += content
                 file_count += 1
 
-            except Exception:
-                # Skip files that cannot be decoded as plain text
+            except (UnicodeDecodeError,PermissionError,OSError):
+                # safely ignore binary or protected files
                 continue
-            # Edge-case safeguard: truncate if character count exceeds limit
-            if len(combined_code)> max_chars:
-                combined_code = combined_code[:max_chars]+ "\n\n....[TRUNCATED: SOURCE CODE EXCEEDS MAX SAFETY THRESHOLD]....."
+            
 
     return combined_code, file_count
 
@@ -77,8 +84,7 @@ def read_project_files(root_dir='.',max_chars = 100000):
 if __name__ == "__main__":
     print("Scanning project files....")
 
-    code_text, count = read_project_files()
+    code, count = read_project_files()
+    print(f"[SUCCESS] SCANNED {count} files ({len(code)}total characters....)")
 
-    print("[SUCCESS] CODE READER ENGINE READY")
-    print(f"TOTAL FILES READ: {count}")
-    print(f"TOTAL CHARACTERS PROCESSED: {len(code_text)}")
+    
