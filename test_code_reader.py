@@ -1,7 +1,7 @@
 # ====================================================================================================================================================
 # Automated Code Scanner Testing
 
-Ensuring Secure, Reliable, and Efficient Project File Analysis
+# Ensuring Secure, Reliable, and Efficient Project File Analysis
 #======================================================================================================================================================
 import os
 import tempfile
