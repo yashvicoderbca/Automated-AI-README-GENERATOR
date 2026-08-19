@@ -1,8 +1,22 @@
 ===============================================================================================================================================================
 
-PROJECT - AUTOMATED AI README GENERATOR ENGINE
-FILE - main.py
-DESCRIPTION - CLI-DRIVEN DOCUMENTATION GENERATOR POWERED BY GROQ Llama-3 features production logging, CLI options, and token safety limits.
+# AI-Powered README Generator
+
+### Transform Your Codebase into Clear, Professional Documentation
+
+An intelligent automation tool that analyzes a software project's source code and generates a structured, professional `README.md` using AI. It scans the project, securely ignores sensitive files, detects an available AI model, and creates documentation based on the actual codebase.
+
+**Key Highlights**
+
+* 🤖 AI-powered README generation
+* 📂 Automatic project source-code scanning
+* 🔐 Sensitive file protection
+* ⚙️ Multiple documentation styles
+* 📏 Configurable source-code limits
+* 🚀 Simple command-line interface
+* 📝 Automatically generates and saves `README.md`
+
+**Built for developers and remote engineering teams who want to turn code into high-quality documentation quickly and consistently.**
 
 ===============================================================================================================================================================
 import os
@@ -14,7 +28,10 @@ from openai import OpenAI
 from code_reader import read_project_files
 
 
-# Configure production-grade application logging.
+# ============================================================
+# LOGGING CONFIGURATION
+# ============================================================
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -24,26 +41,97 @@ logging.basicConfig(
 logger = logging.getLogger("AI_README_Generator")
 
 
-# Load environment variables from the local .env file.
+# ============================================================
+# ENVIRONMENT CONFIGURATION
+# ============================================================
+
 load_dotenv()
 
-
-# Retrieve the Groq API key securely from environment variables.
 api_key = os.getenv("GROQ_API_KEY")
 
-
-# Validate that the required API key is available before starting.
 if not api_key:
-    logger.error("GROQ_API_KEY is missing from the .env file.")
+    logger.error(
+        "GROQ_API_KEY is missing. Please add it to your .env file."
+    )
     raise SystemExit(1)
 
 
-# Initialize the OpenAI-compatible client for Groq's API.
+# ============================================================
+# GROQ CLIENT
+# ============================================================
+
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
     api_key=api_key,
 )
 
+
+# ============================================================
+# MODEL CONFIGURATION
+# ============================================================
+
+# Preferred models are checked dynamically against the models
+# available to the current Groq API key.
+PREFERRED_MODELS = [
+    "openai/gpt-oss-120b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+]
+
+
+def get_available_model():
+    """
+    Find the first available model from our preferred model list.
+
+    This prevents the application from crashing simply because
+    a particular model is unavailable for the current API key.
+    """
+
+    try:
+        logger.info("Checking available Groq models...")
+
+        models_response = client.models.list()
+
+        available_models = {
+            model.id
+            for model in models_response.data
+        }
+
+        logger.info(
+            "Found %d models available for this API key.",
+            len(available_models),
+        )
+
+        for model_name in PREFERRED_MODELS:
+            if model_name in available_models:
+                logger.info(
+                    "Selected Groq model: %s",
+                    model_name,
+                )
+                return model_name
+
+        logger.error(
+            "None of the preferred models are available."
+        )
+
+        logger.error(
+            "Available models are: %s",
+            ", ".join(sorted(available_models)),
+        )
+
+        return None
+
+    except Exception as error:
+        logger.exception(
+            "Failed to retrieve available Groq models: %s",
+            error,
+        )
+        return None
+
+
+# ============================================================
+# CLI ARGUMENTS
+# ============================================================
 
 def setup_cli_args():
     """
@@ -54,42 +142,53 @@ def setup_cli_args():
         description="Production-grade AI README Generator CLI Tool"
     )
 
-    # Allow users to specify the project directory to analyze.
     parser.add_argument(
         "--dir",
         type=str,
         default=".",
-        help="Target project directory path (default: current directory '.')",
+        help=(
+            "Target project directory path "
+            "(default: current directory '.')"
+        ),
     )
 
-    # Allow users to customize the generated README filename.
     parser.add_argument(
         "--output",
         type=str,
         default="README.md",
-        help="Output Markdown file name (default: 'README.md')",
+        help=(
+            "Output Markdown file name "
+            "(default: 'README.md')"
+        ),
     )
 
-    # Allow users to choose the desired documentation style.
     parser.add_argument(
         "--style",
         type=str,
         choices=["detailed", "minimal", "beginner"],
         default="detailed",
-        help="Documentation style: detailed, minimal, or beginner",
+        help=(
+            "Documentation style: detailed, minimal, "
+            "or beginner"
+        ),
     )
 
-    # Protect the application from sending an excessively large
-    # amount of source code to the language model.
     parser.add_argument(
         "--max-chars",
         type=int,
         default=100000,
-        help="Maximum source-code character limit (default: 100,000)",
+        help=(
+            "Maximum source-code character limit "
+            "(default: 100,000)"
+        ),
     )
 
     return parser.parse_args()
 
+
+# ============================================================
+# DOCUMENTATION STYLE
+# ============================================================
 
 def get_style_instructions(style_choice):
     """
@@ -102,55 +201,29 @@ def get_style_instructions(style_choice):
             "and focused only on the most important information."
         )
 
-    elif style_choice == "beginner":
+    if style_choice == "beginner":
         return (
             "Write in an easy-to-understand, beginner-friendly tone "
             "with clear step-by-step explanations and practical examples."
         )
 
-    else:
-        return (
-            "Provide a comprehensive, professional, technically accurate, "
-            "and architecturally detailed technical guide."
-        )
+    return (
+        "Provide a comprehensive, professional, technically accurate, "
+        "and architecturally detailed technical guide."
+    )
 
 
-def generate_readme():
+# ============================================================
+# PROMPT GENERATION
+# ============================================================
+
+def build_prompt(code_text, style):
     """
-    Analyze a software project and generate a professional README.md file.
+    Build the README generation prompt.
     """
 
-    # Parse user-provided command-line arguments.
-    args = setup_cli_args()
+    style_instructions = get_style_instructions(style)
 
-    logger.info("Scanning project directory: '%s'...", args.dir)
-
-    # Read and combine supported project source files.
-    code_text, file_count = read_project_files(
-        args.dir,
-        max_chars=args.max_chars,
-    )
-
-    # Stop execution if no source files are available.
-    if file_count == 0:
-        logger.error("No supported source files were found to analyze.")
-        return
-
-    logger.info(
-        "Successfully read %d files (%d total characters).",
-        file_count,
-        len(code_text),
-    )
-
-    logger.info(
-        "Analyzing source code using Groq Llama 3.3 (%s style)...",
-        args.style.upper(),
-    )
-
-    # Generate instructions according to the selected documentation style.
-    style_instructions = get_style_instructions(args.style)
-
-    # Build a structured prompt for the language model.
     prompt = f"""
 You are an expert technical writer, software architect,
 and developer documentation specialist.
@@ -180,11 +253,13 @@ Important requirements:
 - Do not invent features, commands, dependencies, APIs, or configuration.
 - If information is unavailable, do not fabricate it.
 - Use professional, technically accurate Markdown.
-- Keep explanations clear enough for developers of different experience levels.
+- Keep explanations clear enough for developers of different
+  experience levels.
 - Include code blocks where useful.
-- Preserve the actual commands and filenames found in the project.
+- Preserve actual commands and filenames found in the project.
 - Do not mention that you are an AI.
-- Return only the final README content.
+- Return ONLY the final README content.
+- Do not wrap the entire README inside a Markdown code block.
 
 Project Source Code:
 --------------------
@@ -192,10 +267,106 @@ Project Source Code:
 --------------------
 """
 
+    return prompt
+
+
+# ============================================================
+# README GENERATION
+# ============================================================
+
+def generate_readme():
+    """
+    Analyze a software project and generate a professional README.md.
+    """
+
+    args = setup_cli_args()
+
+    # --------------------------------------------------------
+    # Validate source directory
+    # --------------------------------------------------------
+
+    if not os.path.isdir(args.dir):
+        logger.error(
+            "Project directory does not exist: '%s'",
+            args.dir,
+        )
+        return
+
+    if args.max_chars <= 0:
+        logger.error(
+            "--max-chars must be greater than 0."
+        )
+        return
+
+    # --------------------------------------------------------
+    # Read project files
+    # --------------------------------------------------------
+
+    logger.info(
+        "Scanning project directory: '%s'...",
+        args.dir,
+    )
+
     try:
-        # Send the project analysis request to the Groq LLM.
+        code_text, file_count = read_project_files(
+            args.dir,
+            max_chars=args.max_chars,
+        )
+
+    except Exception as error:
+        logger.exception(
+            "Failed to read project files: %s",
+            error,
+        )
+        return
+
+    if file_count == 0:
+        logger.error(
+            "No supported source files were found to analyze."
+        )
+        return
+
+    logger.info(
+        "Successfully read %d files (%d total characters).",
+        file_count,
+        len(code_text),
+    )
+
+    # --------------------------------------------------------
+    # Select available model
+    # --------------------------------------------------------
+
+    model = get_available_model()
+
+    if not model:
+        logger.error(
+            "No compatible Groq model is available for this API key."
+        )
+        return
+
+    logger.info(
+        "Analyzing source code using Groq model '%s' (%s style)...",
+        model,
+        args.style.upper(),
+    )
+
+    # --------------------------------------------------------
+    # Build prompt
+    # --------------------------------------------------------
+
+    prompt = build_prompt(
+        code_text=code_text,
+        style=args.style,
+    )
+
+    # --------------------------------------------------------
+    # Call Groq API
+    # --------------------------------------------------------
+
+    try:
+
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=model,
             messages=[
                 {
                     "role": "system",
@@ -210,35 +381,81 @@ Project Source Code:
                     "content": prompt,
                 },
             ],
-            temperature=0.7,
+            temperature=0.3,
         )
 
-        # Extract the generated README content from the API response.
-        readme_content = response.choices[0].message.content
+        # ----------------------------------------------------
+        # Extract response
+        # ----------------------------------------------------
 
-        if not readme_content:
-            logger.error("The AI model returned an empty README.")
+        if not response.choices:
+            logger.error(
+                "Groq returned no response choices."
+            )
             return
 
-        # Save the generated documentation to the requested output file.
-        with open(args.output, "w", encoding="utf-8") as file:
+        readme_content = response.choices[0].message.content
+
+        if not readme_content or not readme_content.strip():
+            logger.error(
+                "The AI model returned an empty README."
+            )
+            return
+
+        readme_content = readme_content.strip()
+
+        # ----------------------------------------------------
+        # Create output directory if required
+        # ----------------------------------------------------
+
+        output_directory = os.path.dirname(
+            os.path.abspath(args.output)
+        )
+
+        os.makedirs(
+            output_directory,
+            exist_ok=True,
+        )
+
+        # ----------------------------------------------------
+        # Save README
+        # ----------------------------------------------------
+
+        with open(
+            args.output,
+            "w",
+            encoding="utf-8",
+        ) as file:
+
             file.write(readme_content)
+            file.write("\n")
 
         logger.info(
             "README successfully generated and saved to '%s'.",
             args.output,
         )
 
+        logger.info(
+            "README size: %d characters.",
+            len(readme_content),
+        )
+
+    # --------------------------------------------------------
+    # API errors
+    # --------------------------------------------------------
+
     except Exception as error:
-        # Log the actual exception object.
-        # This fixes the original "e is not defined" error.
+
         logger.exception(
-            "Failed to generate README due to an API or system error: %s",
+            "Failed to generate README due to an API or "
+            "system error: %s",
             error,
         )
 
 
-# Run the README generator only when this file is executed directly.
+# ============================================================
+# APPLICATION ENTRY POINT
+# ============================================================
+
 if __name__ == "__main__":
     generate_readme()
-
