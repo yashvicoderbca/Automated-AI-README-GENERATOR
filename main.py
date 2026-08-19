@@ -1,24 +1,24 @@
-===============================================================================================================================================================
+#===============================================================================================================================================================
 
 # AI-Powered README Generator
 
-### Transform Your Codebase into Clear, Professional Documentation
+# Transform Your Codebase into Clear, Professional Documentation
 
-An intelligent automation tool that analyzes a software project's source code and generates a structured, professional `README.md` using AI. It scans the project, securely ignores sensitive files, detects an available AI model, and creates documentation based on the actual codebase.
+# An intelligent automation tool that analyzes a software project's source code and generates a structured, professional `README.md` using AI. It scans the project, securely ignores sensitive files, detects an available AI model, and creates documentation based on the actual codebase.
 
-**Key Highlights**
+# **Key Highlights**
 
-* 🤖 AI-powered README generation
-* 📂 Automatic project source-code scanning
-* 🔐 Sensitive file protection
-* ⚙️ Multiple documentation styles
-* 📏 Configurable source-code limits
-* 🚀 Simple command-line interface
-* 📝 Automatically generates and saves `README.md`
+# 🤖 AI-powered README generation
+# 📂 Automatic project source-code scanning
+# 🔐 Sensitive file protection
+# ⚙️ Multiple documentation styles
+ # 📏 Configurable source-code limits
+ # 🚀 Simple command-line interface
+ #📝 Automatically generates and saves `README.md`
 
-**Built for developers and remote engineering teams who want to turn code into high-quality documentation quickly and consistently.**
+# Built for developers and remote engineering teams who want to turn code into high-quality documentation quickly and consistently.**
 
-===============================================================================================================================================================
+#===============================================================================================================================================================
 import os
 import argparse
 import logging
